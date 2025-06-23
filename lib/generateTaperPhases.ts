@@ -7,6 +7,7 @@ export interface TaperPhase {
   halfPills: number;
   totalPills: number;
   avgDailyDose: number;
+  cycleLength: number;
   isCurrent?: boolean;
 }
 
@@ -14,29 +15,34 @@ interface GenerateTaperPhasesInput {
   currentAvgDose: number;
   goalAvgDose: number;
   numberOfSteps: number;
-  cycleLength?: number;
+  minCycleLength: number;
+  maxCycleLength: number;
 }
 
 export function generateTaperPhases({
   currentAvgDose,
   goalAvgDose,
   numberOfSteps,
-  cycleLength = 14,
+  minCycleLength,
+  maxCycleLength,
 }: GenerateTaperPhasesInput): TaperPhase[] {
   const phases: TaperPhase[] = [];
 
-  // Step 1: Generate all valid pill combinations
+  // Step 1: Generate all valid pill combinations across cycle length range
   const combinations: Omit<TaperPhase, "phase" | "isCurrent">[] = [];
-  for (let full = 0; full <= cycleLength; full++) {
-    for (let half = 0; half <= cycleLength - full; half++) {
-      const totalPills = full + 0.5 * half;
-      const avgDailyDose = parseFloat((totalPills / cycleLength).toFixed(3));
-      combinations.push({
-        fullPills: full,
-        halfPills: half,
-        totalPills,
-        avgDailyDose,
-      });
+  for (let cycle = minCycleLength; cycle <= maxCycleLength; cycle++) {
+    for (let full = 0; full <= cycle; full++) {
+      for (let half = 0; half <= cycle - full; half++) {
+        const totalPills = full + 0.5 * half;
+        const avgDailyDose = parseFloat((totalPills / cycle).toFixed(3));
+        combinations.push({
+          fullPills: full,
+          halfPills: half,
+          totalPills,
+          avgDailyDose,
+          cycleLength: cycle,
+        });
+      }
     }
   }
 

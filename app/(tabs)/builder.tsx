@@ -13,6 +13,8 @@ export default function BuilderScreen() {
   const [currentAvgDose, setCurrentAvgDose] = useState("0.75");
   const [goalAvgDose, setGoalAvgDose] = useState("0.5");
   const [numberOfSteps, setNumberOfSteps] = useState("7");
+  const [minCycleLength, setMinCycleLength] = useState("14");
+  const [maxCycleLength, setMaxCycleLength] = useState("14");
 
   const [taperPhases, setTaperPhases] = useState<TaperPhase[]>([]);
 
@@ -21,6 +23,8 @@ export default function BuilderScreen() {
       currentAvgDose: parseFloat(currentAvgDose),
       goalAvgDose: parseFloat(goalAvgDose),
       numberOfSteps: parseInt(numberOfSteps, 10),
+      minCycleLength: parseInt(minCycleLength, 10),
+      maxCycleLength: parseInt(maxCycleLength, 10),
     });
     setTaperPhases(phases);
   };
@@ -52,6 +56,21 @@ export default function BuilderScreen() {
           value={numberOfSteps}
           onChangeText={setNumberOfSteps}
         />
+        <TextInput
+          style={styles.input}
+          keyboardType="numeric"
+          placeholder="Min Cycle Length"
+          value={minCycleLength}
+          onChangeText={setMinCycleLength}
+        />
+
+        <TextInput
+          style={styles.input}
+          keyboardType="numeric"
+          placeholder="Max Cycle Length"
+          value={maxCycleLength}
+          onChangeText={setMaxCycleLength}
+        />
         <Button title="Generate Plan" onPress={handleGenerate} />
       </View>
 
@@ -64,6 +83,7 @@ export default function BuilderScreen() {
             <Text style={styles.cellHeader}>Half</Text>
             <Text style={styles.cellHeader}>Total</Text>
             <Text style={styles.cellHeader}>Avg/Day</Text>
+            <Text style={styles.cellHeader}>Cycle Length</Text>
           </View>
           {taperPhases.map((phase) => (
             <View style={styles.row} key={phase.phase}>
@@ -72,6 +92,7 @@ export default function BuilderScreen() {
               <Text style={styles.cell}>{phase.halfPills}</Text>
               <Text style={styles.cell}>{phase.totalPills}</Text>
               <Text style={styles.cell}>{phase.avgDailyDose}</Text>
+              <Text style={styles.cell}>{phase.cycleLength}</Text>
             </View>
           ))}
         </View>
