@@ -1,3 +1,4 @@
+import TaperLineChart from "@/components/TaperLineChart";
 import MultiSlider from "@ptomasroos/react-native-multi-slider";
 import React, { useState } from "react";
 import {
@@ -14,8 +15,6 @@ export default function BuilderScreen() {
   const [currentAvgDose, setCurrentAvgDose] = useState("0.75");
   const [goalAvgDose, setGoalAvgDose] = useState("0.5");
   const [numberOfSteps, setNumberOfSteps] = useState("7");
-  const [minCycleLength, setMinCycleLength] = useState("14");
-  const [maxCycleLength, setMaxCycleLength] = useState("14");
   const [cycleLengthRange, setCycleLengthRange] = useState<[number, number]>([
     14, 14,
   ]);
@@ -102,6 +101,14 @@ export default function BuilderScreen() {
             </View>
           ))}
         </View>
+      )}
+      {taperPhases.length > 0 && (
+        <TaperLineChart
+          data={taperPhases.map((p) => ({
+            phase: p.phase,
+            avgDailyDose: p.avgDailyDose,
+          }))}
+        />
       )}
     </ScrollView>
   );
