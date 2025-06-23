@@ -1,3 +1,4 @@
+import MultiSlider from "@ptomasroos/react-native-multi-slider";
 import React, { useState } from "react";
 import {
   Button,
@@ -7,7 +8,7 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { generateTaperPhases, TaperPhase } from "../../lib/generateTaperPhases"; // adjust if using aliases
+import { generateTaperPhases, TaperPhase } from "../../lib/generateTaperPhases";
 
 export default function BuilderScreen() {
   const [currentAvgDose, setCurrentAvgDose] = useState("0.75");
@@ -15,17 +16,23 @@ export default function BuilderScreen() {
   const [numberOfSteps, setNumberOfSteps] = useState("7");
   const [minCycleLength, setMinCycleLength] = useState("14");
   const [maxCycleLength, setMaxCycleLength] = useState("14");
+  const [cycleLengthRange, setCycleLengthRange] = useState<[number, number]>([
+    14, 14,
+  ]);
 
   const [taperPhases, setTaperPhases] = useState<TaperPhase[]>([]);
 
   const handleGenerate = () => {
+    const [minCycleLength, maxCycleLength] = cycleLengthRange;
+
     const phases = generateTaperPhases({
       currentAvgDose: parseFloat(currentAvgDose),
       goalAvgDose: parseFloat(goalAvgDose),
       numberOfSteps: parseInt(numberOfSteps, 10),
-      minCycleLength: parseInt(minCycleLength, 10),
-      maxCycleLength: parseInt(maxCycleLength, 10),
+      minCycleLength,
+      maxCycleLength,
     });
+
     setTaperPhases(phases);
   };
 
@@ -56,21 +63,18 @@ export default function BuilderScreen() {
           value={numberOfSteps}
           onChangeText={setNumberOfSteps}
         />
-        <TextInput
-          style={styles.input}
-          keyboardType="numeric"
-          placeholder="Min Cycle Length"
-          value={minCycleLength}
-          onChangeText={setMinCycleLength}
+        <MultiSlider
+          values={cycleLengthRange}
+          min={0}
+          max={20}
+          step={1}
+          onValuesChange={(values) =>
+            setCycleLengthRange(values as [number, number])
+          }
         />
-
-        <TextInput
-          style={styles.input}
-          keyboardType="numeric"
-          placeholder="Max Cycle Length"
-          value={maxCycleLength}
-          onChangeText={setMaxCycleLength}
-        />
+        <Text className="mt-2 text-sm">
+          Min: {cycleLengthRange[0]} days — Max: {cycleLengthRange[1]} days
+        </Text>
         <Button title="Generate Plan" onPress={handleGenerate} />
       </View>
 
