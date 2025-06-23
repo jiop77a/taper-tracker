@@ -68,6 +68,8 @@ export default function BuilderScreen() {
           min={0}
           max={20}
           step={1}
+          allowOverlap
+          snapped
           onValuesChange={(values) =>
             setCycleLengthRange(values as [number, number])
           }
