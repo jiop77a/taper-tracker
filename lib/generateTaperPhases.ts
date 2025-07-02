@@ -352,13 +352,24 @@ export function generateUnifiedTaperPhases({
     Math.max(totalReduction / 3, 0.02) // At least 0.02mg or 1/3 of total
   );
 
+  // Calculate a smarter default max steps based on duration requirements
+  let defaultMaxSteps = 25;
+  if (durationRange?.min && !stepsRange?.max) {
+    // If we have a minimum duration requirement but no explicit max steps,
+    // estimate how many steps we might need
+    const estimatedMinSteps = Math.ceil(
+      durationRange.min / (cycleLengthRange?.max || 14)
+    );
+    defaultMaxSteps = Math.max(25, estimatedMinSteps + 10); // Add buffer
+  }
+
   const baseConstraints = {
     minStepSize: stepSizeRange?.min || defaultMinStepSize,
     maxStepSize: stepSizeRange?.max || defaultMaxStepSize,
     minCycleLength: cycleLengthRange?.min || 7,
     maxCycleLength: cycleLengthRange?.max || 28,
     minSteps: stepsRange?.min || 3,
-    maxSteps: stepsRange?.max || 15,
+    maxSteps: stepsRange?.max || defaultMaxSteps,
     minDuration: durationRange?.min || 0,
     maxDuration: durationRange?.max || 365,
   };
@@ -578,7 +589,7 @@ function findConstrainedOptimalPath(
 
   // Greedily find the best path within all constraints
   while (
-    currentDose > goalDose + constraints.minStepSize &&
+    currentDose > goalDose + 0.001 && // Small tolerance to ensure we reach the goal
     totalDuration < constraints.maxDuration &&
     stepCount < constraints.maxSteps
   ) {
@@ -742,10 +753,15 @@ function findConstrainedOptimalPath(
     const targetDuration = constraints.minDuration;
     const extraTimeNeeded = targetDuration - totalDuration;
 
-    // Calculate how many extra phases we can add
+    // Calculate how many extra phases we can add - be more aggressive about meeting duration
+    // Use the actual max cycle length available, not a fixed 14-day assumption
+    const avgCycleLength = Math.max(
+      constraints.minCycleLength,
+      Math.min(constraints.maxCycleLength, 14)
+    );
     const maxExtraPhases = Math.min(
-      Math.floor(extraTimeNeeded / 14), // Assume 14-day cycles
-      constraints.maxSteps - stepCount
+      Math.ceil(extraTimeNeeded / avgCycleLength), // Use actual cycle lengths
+      Math.max(10, constraints.maxSteps - stepCount) // Allow at least 10 extra phases if needed
     );
 
     if (maxExtraPhases > 0) {
@@ -769,17 +785,49 @@ function findConstrainedOptimalPath(
         newTotalDuration += currentPhase.cycleLength;
         newStepCount++;
 
-        // Decide whether to add a repeat of this phase for stabilization
-        // SMOOTHNESS PRIORITY: Add repeats to maintain consistent progression
-        // Prefer adding repeats at intermediate levels to create smooth transitions
-        const shouldRepeat =
-          extraPhasesUsed < maxExtraPhases &&
-          i < path.length - 1 && // Not the last phase
-          newStepCount < constraints.maxSteps &&
-          newTotalDuration + currentPhase.cycleLength <=
-            constraints.maxDuration;
+        // Decide whether to add repeats of this phase for stabilization
+        // DURATION PRIORITY: Be more aggressive about adding repeats to meet duration requirements
+        // Calculate how much extra time we still need
+        const remainingTimeNeeded = Math.max(
+          0,
+          targetDuration - newTotalDuration
+        );
+        const remainingExtraPhases = maxExtraPhases - extraPhasesUsed;
 
-        if (shouldRepeat) {
+        // Allow intermediate repetition but avoid repetition at target dose
+        let repeatsToAdd = 0;
+        if (remainingTimeNeeded > 0 && extraPhasesUsed < maxExtraPhases) {
+          // Don't add repetition if this is the target dose - user can stay there as long as they want
+          const isTargetDose =
+            Math.abs(currentPhase.avgDailyDose - goalDose) <= 0.001;
+
+          if (!isTargetDose) {
+            // Calculate how many repeats we can fit - be more aggressive for duration requirements
+            // If we're significantly short on duration, allow more repeats
+            const durationShortfall = targetDuration - newTotalDuration;
+            const maxRepeatsAllowed = durationShortfall > 50 ? 5 : 4; // Even more repeats for intermediate doses
+
+            const maxRepeatsForThisPhase = Math.min(
+              maxRepeatsAllowed,
+              Math.floor(remainingTimeNeeded / currentPhase.cycleLength),
+              maxExtraPhases - extraPhasesUsed
+            );
+
+            if (
+              maxRepeatsForThisPhase > 0 &&
+              newStepCount + maxRepeatsForThisPhase <=
+                Math.max(constraints.maxSteps, stepCount + maxExtraPhases) &&
+              newTotalDuration +
+                maxRepeatsForThisPhase * currentPhase.cycleLength <=
+                constraints.maxDuration
+            ) {
+              repeatsToAdd = maxRepeatsForThisPhase;
+            }
+          }
+        }
+
+        // Add the calculated number of repeats
+        if (repeatsToAdd > 0) {
           // Find a matching combination for this dose
           const matchingCombos = combinations.filter(
             (combo) =>
@@ -799,10 +847,13 @@ function findConstrainedOptimalPath(
               return currentConsistency < bestConsistency ? current : best;
             });
 
-            newPath.push(bestCombo);
-            newTotalDuration += bestCombo.cycleLength;
-            newStepCount++;
-            extraPhasesUsed++;
+            // Add multiple repeats if needed
+            for (let repeat = 0; repeat < repeatsToAdd; repeat++) {
+              newPath.push(bestCombo);
+              newTotalDuration += bestCombo.cycleLength;
+              newStepCount++;
+              extraPhasesUsed++;
+            }
           }
         }
 
@@ -831,6 +882,76 @@ function findConstrainedOptimalPath(
       path.push(...newPath);
       totalDuration = newTotalDuration;
       stepCount = newStepCount;
+
+      constraintStatus.reasoning.push(
+        `Added ${extraPhasesUsed} stabilization phases to extend duration`
+      );
+
+      // If we still haven't met the duration requirement, try a more aggressive approach
+      if (totalDuration < targetDuration) {
+        const stillNeeded = targetDuration - totalDuration;
+        const additionalPhases = Math.ceil(stillNeeded / avgCycleLength);
+
+        // IMPROVED STRATEGY: Use intermediate phases but avoid target dose repetition
+        // Get the last few phases but exclude the target dose
+        const lastPhases = path.slice(-Math.min(5, path.length));
+        const intermediatePhases = lastPhases.filter(
+          (phase) => Math.abs(phase.avgDailyDose - goalDose) > 0.001 // Exclude target dose
+        );
+
+        let additionalDuration = 0;
+        let additionalCount = 0;
+
+        if (intermediatePhases.length > 0) {
+          const sortedIntermediatePhases = intermediatePhases.sort(
+            (a, b) => b.avgDailyDose - a.avgDailyDose
+          ); // Higher first for more variety
+
+          let currentLowestDose = path[path.length - 1].avgDailyDose;
+
+          // Add phases in order, but never exceeding current lowest dose and never at target
+          // Be more aggressive about adding phases to meet duration requirements
+          for (
+            let repeat = 0;
+            repeat < additionalPhases && additionalCount < 20; // Increased limit
+            repeat++
+          ) {
+            // Cycle through the sorted intermediate phases
+            const phaseToRepeat =
+              sortedIntermediatePhases[
+                repeat % sortedIntermediatePhases.length
+              ];
+
+            if (
+              phaseToRepeat.avgDailyDose <= currentLowestDose &&
+              Math.abs(phaseToRepeat.avgDailyDose - goalDose) > 0.001 && // Not target dose
+              totalDuration + additionalDuration + phaseToRepeat.cycleLength <=
+                constraints.maxDuration
+            ) {
+              path.push(phaseToRepeat);
+              additionalDuration += phaseToRepeat.cycleLength;
+              additionalCount++;
+
+              // Update the current lowest dose to maintain downward progression
+              currentLowestDose = Math.min(
+                currentLowestDose,
+                phaseToRepeat.avgDailyDose
+              );
+            } else {
+              break; // Can't add more without exceeding constraints
+            }
+          }
+        }
+
+        if (additionalCount > 0) {
+          totalDuration += additionalDuration;
+          stepCount += additionalCount;
+
+          constraintStatus.reasoning.push(
+            `Added ${additionalCount} additional phases with varied doses to meet duration requirement`
+          );
+        }
+      }
     }
   }
 
@@ -909,8 +1030,26 @@ function findConstrainedOptimalPath(
     }
   }
 
+  // CRITICAL SAFETY CHECK: Ensure no dose increases in the final path
+  let prevDose = startDose;
+  const validPath: typeof path = [];
+
+  for (const phase of path) {
+    if (phase.avgDailyDose <= prevDose) {
+      validPath.push(phase);
+      prevDose = phase.avgDailyDose;
+    } else {
+      // Skip any phase that would cause a dose increase
+      constraintStatus.warnings.push(
+        `Skipped phase with dose increase: ${prevDose.toFixed(
+          3
+        )} -> ${phase.avgDailyDose.toFixed(3)} pills`
+      );
+    }
+  }
+
   // Convert to TaperPhase format
-  const phases = path.map((combo, index) => ({
+  const phases = validPath.map((combo, index) => ({
     ...combo,
     phase: index + 1,
     isCurrent: false,
@@ -1052,12 +1191,25 @@ function analyzeConstraintStatus(
         `Maximum steps: ${phases.length} ≤ ${originalConstraints.stepsRange.max}`
       );
     } else if (originalConstraints.stepsRange.max) {
-      status.violated.push(
-        `Maximum steps: ${phases.length} > ${originalConstraints.stepsRange.max}`
-      );
-      status.reasoning.push(
-        `Exceeded maximum steps to meet minimum duration requirement`
-      );
+      // Check if we exceeded max steps to meet duration requirements
+      const hasMinDuration = originalConstraints.durationRange?.min;
+      if (
+        hasMinDuration &&
+        originalConstraints.durationRange &&
+        originalConstraints.durationRange.min &&
+        totalDuration >= originalConstraints.durationRange.min
+      ) {
+        status.warnings.push(
+          `Maximum steps exceeded: ${phases.length} > ${originalConstraints.stepsRange.max} (needed to meet minimum duration)`
+        );
+        status.reasoning.push(
+          `Exceeded maximum steps to meet minimum duration requirement of ${originalConstraints.durationRange.min} days`
+        );
+      } else {
+        status.violated.push(
+          `Maximum steps: ${phases.length} > ${originalConstraints.stepsRange.max}`
+        );
+      }
     }
   }
 

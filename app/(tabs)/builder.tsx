@@ -328,32 +328,40 @@ export default function BuilderScreen() {
         currentAvgDose: parseFloat(currentAvgDose),
         goalAvgDose: parseFloat(goalAvgDose),
         stepSizeRange: stepSizeManual
-          ? {
-              min: minStepSize ? parseFloat(minStepSize) : undefined,
-              max: maxStepSize ? parseFloat(maxStepSize) : undefined,
-            }
+          ? minStepSize || maxStepSize
+            ? {
+                min: minStepSize ? parseFloat(minStepSize) : undefined,
+                max: maxStepSize ? parseFloat(maxStepSize) : undefined,
+              }
+            : undefined
           : undefined,
         cycleLengthRange: cycleLengthManual
-          ? {
-              min: minCycleLength ? parseInt(minCycleLength, 10) : undefined,
-              max: maxCycleLength ? parseInt(maxCycleLength, 10) : undefined,
-            }
+          ? minCycleLength || maxCycleLength
+            ? {
+                min: minCycleLength ? parseInt(minCycleLength, 10) : undefined,
+                max: maxCycleLength ? parseInt(maxCycleLength, 10) : undefined,
+              }
+            : undefined
           : undefined,
         stepsRange: stepsManual
-          ? {
-              min: minSteps ? parseInt(minSteps, 10) : undefined,
-              max: maxSteps ? parseInt(maxSteps, 10) : undefined,
-            }
+          ? minSteps || maxSteps
+            ? {
+                min: minSteps ? parseInt(minSteps, 10) : undefined,
+                max: maxSteps ? parseInt(maxSteps, 10) : undefined,
+              }
+            : undefined
           : undefined,
         durationRange: durationManual
-          ? {
-              min: minTotalDuration
-                ? parseInt(minTotalDuration, 10)
-                : undefined,
-              max: maxTotalDuration
-                ? parseInt(maxTotalDuration, 10)
-                : undefined,
-            }
+          ? minTotalDuration || maxTotalDuration
+            ? {
+                min: minTotalDuration
+                  ? parseInt(minTotalDuration, 10)
+                  : undefined,
+                max: maxTotalDuration
+                  ? parseInt(maxTotalDuration, 10)
+                  : undefined,
+              }
+            : undefined
           : undefined,
       });
       setTaperPhases(result.phases);
