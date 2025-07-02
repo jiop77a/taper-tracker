@@ -1,7 +1,7 @@
 import TaperLineChart from "@/components/TaperLineChart";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Button,
   ScrollView,
@@ -51,11 +51,237 @@ export default function BuilderScreen() {
   const [constraintStatus, setConstraintStatus] =
     useState<ConstraintStatus | null>(null);
 
+  // Input validation state
+  const [inputErrors, setInputErrors] = useState<string[]>([]);
+
   // Determine display units
   const isMilligramMode = pillStrength && pillStrength.trim() !== "";
   const displayUnit = isMilligramMode ? "mg" : " pills";
 
+  // Validate inputs and return errors
+  const validateInputs = useCallback((): string[] => {
+    const errors: string[] = [];
+    const current = parseFloat(currentAvgDose);
+    const goal = parseFloat(goalAvgDose);
+
+    // Check if inputs are valid numbers
+    if (isNaN(current) || currentAvgDose.trim() === "") {
+      errors.push("Current dose must be a valid number");
+    } else {
+      // Check dosing bounds
+      if (current > 2.0) {
+        errors.push("Current dose cannot exceed 2.0 pills per day");
+      }
+      if (current <= 0) {
+        errors.push("Current dose must be greater than 0");
+      }
+    }
+
+    if (isNaN(goal) || goalAvgDose.trim() === "") {
+      errors.push("Goal dose must be a valid number");
+    } else {
+      if (goal < 0) {
+        errors.push("Goal dose cannot be negative");
+      }
+    }
+
+    // Check relationship between current and goal
+    if (!isNaN(current) && !isNaN(goal)) {
+      if (goal >= current) {
+        errors.push("Goal dose must be less than current dose");
+      }
+      const reduction = current - goal;
+      if (reduction < 0.25) {
+        errors.push("Reduction must be at least 0.25 pills (quarter pill)");
+      }
+    }
+
+    // Validate pill strength if provided
+    if (pillStrength.trim() !== "") {
+      const strength = parseFloat(pillStrength);
+      if (isNaN(strength) || strength <= 0) {
+        errors.push("Pill strength must be a positive number");
+      } else if (strength > 10) {
+        errors.push(
+          "Pill strength seems unusually high (>10mg) - please verify"
+        );
+      }
+    }
+
+    // Validate manual constraint inputs if not in auto-optimize mode
+    if (!isAutoOptimizeAll) {
+      // Validate step size inputs
+      if (stepSizeManual) {
+        if (minStepSize.trim() !== "") {
+          const minStep = parseFloat(minStepSize);
+          if (isNaN(minStep) || minStep <= 0) {
+            errors.push("Minimum step size must be a positive number");
+          } else if (minStep > 1) {
+            errors.push("Minimum step size seems too large (>1 pill)");
+          }
+        }
+        if (maxStepSize.trim() !== "") {
+          const maxStep = parseFloat(maxStepSize);
+          if (isNaN(maxStep) || maxStep <= 0) {
+            errors.push("Maximum step size must be a positive number");
+          } else if (maxStep > 2) {
+            errors.push("Maximum step size seems too large (>2 pills)");
+          }
+        }
+        // Check min/max relationship
+        if (minStepSize.trim() !== "" && maxStepSize.trim() !== "") {
+          const minStep = parseFloat(minStepSize);
+          const maxStep = parseFloat(maxStepSize);
+          if (!isNaN(minStep) && !isNaN(maxStep) && minStep > maxStep) {
+            errors.push(
+              "Minimum step size cannot be greater than maximum step size"
+            );
+          }
+        }
+      }
+
+      // Validate cycle length inputs
+      if (cycleLengthManual) {
+        if (minCycleLength.trim() !== "") {
+          const minCycle = parseInt(minCycleLength, 10);
+          if (isNaN(minCycle) || minCycle < 1) {
+            errors.push("Minimum cycle length must be at least 1 day");
+          } else if (minCycle > 90) {
+            errors.push("Minimum cycle length seems too long (>90 days)");
+          }
+        }
+        if (maxCycleLength.trim() !== "") {
+          const maxCycle = parseInt(maxCycleLength, 10);
+          if (isNaN(maxCycle) || maxCycle < 1) {
+            errors.push("Maximum cycle length must be at least 1 day");
+          } else if (maxCycle > 365) {
+            errors.push("Maximum cycle length seems too long (>365 days)");
+          }
+        }
+        // Check min/max relationship
+        if (minCycleLength.trim() !== "" && maxCycleLength.trim() !== "") {
+          const minCycle = parseInt(minCycleLength, 10);
+          const maxCycle = parseInt(maxCycleLength, 10);
+          if (!isNaN(minCycle) && !isNaN(maxCycle) && minCycle > maxCycle) {
+            errors.push(
+              "Minimum cycle length cannot be greater than maximum cycle length"
+            );
+          }
+        }
+      }
+
+      // Validate steps inputs
+      if (stepsManual) {
+        if (minSteps.trim() !== "") {
+          const minStepsNum = parseInt(minSteps, 10);
+          if (isNaN(minStepsNum) || minStepsNum < 1) {
+            errors.push("Minimum steps must be at least 1");
+          } else if (minStepsNum > 50) {
+            errors.push("Minimum steps seems too high (>50)");
+          }
+        }
+        if (maxSteps.trim() !== "") {
+          const maxStepsNum = parseInt(maxSteps, 10);
+          if (isNaN(maxStepsNum) || maxStepsNum < 1) {
+            errors.push("Maximum steps must be at least 1");
+          } else if (maxStepsNum > 100) {
+            errors.push("Maximum steps seems too high (>100)");
+          }
+        }
+        // Check min/max relationship
+        if (minSteps.trim() !== "" && maxSteps.trim() !== "") {
+          const minStepsNum = parseInt(minSteps, 10);
+          const maxStepsNum = parseInt(maxSteps, 10);
+          if (
+            !isNaN(minStepsNum) &&
+            !isNaN(maxStepsNum) &&
+            minStepsNum > maxStepsNum
+          ) {
+            errors.push("Minimum steps cannot be greater than maximum steps");
+          }
+        }
+      }
+
+      // Validate duration inputs
+      if (durationManual) {
+        if (minTotalDuration.trim() !== "") {
+          const minDuration = parseInt(minTotalDuration, 10);
+          if (isNaN(minDuration) || minDuration < 1) {
+            errors.push("Minimum duration must be at least 1 day");
+          } else if (minDuration > 1095) {
+            // 3 years
+            errors.push("Minimum duration seems too long (>3 years)");
+          }
+        }
+        if (maxTotalDuration.trim() !== "") {
+          const maxDuration = parseInt(maxTotalDuration, 10);
+          if (isNaN(maxDuration) || maxDuration < 1) {
+            errors.push("Maximum duration must be at least 1 day");
+          } else if (maxDuration > 1825) {
+            // 5 years
+            errors.push("Maximum duration seems too long (>5 years)");
+          }
+        }
+        // Check min/max relationship
+        if (minTotalDuration.trim() !== "" && maxTotalDuration.trim() !== "") {
+          const minDuration = parseInt(minTotalDuration, 10);
+          const maxDuration = parseInt(maxTotalDuration, 10);
+          if (
+            !isNaN(minDuration) &&
+            !isNaN(maxDuration) &&
+            minDuration > maxDuration
+          ) {
+            errors.push(
+              "Minimum duration cannot be greater than maximum duration"
+            );
+          }
+        }
+      }
+    } else {
+      // Validate auto-optimize mode inputs
+      if (maxTotalDuration.trim() !== "") {
+        const maxDuration = parseInt(maxTotalDuration, 10);
+        if (isNaN(maxDuration) || maxDuration < 1) {
+          errors.push("Maximum duration must be at least 1 day");
+        } else if (maxDuration > 1825) {
+          // 5 years
+          errors.push("Maximum duration seems too long (>5 years)");
+        }
+      }
+    }
+
+    return errors;
+  }, [
+    currentAvgDose,
+    goalAvgDose,
+    pillStrength,
+    isAutoOptimizeAll,
+    stepSizeManual,
+    minStepSize,
+    maxStepSize,
+    cycleLengthManual,
+    minCycleLength,
+    maxCycleLength,
+    stepsManual,
+    minSteps,
+    maxSteps,
+    durationManual,
+    minTotalDuration,
+    maxTotalDuration,
+  ]);
+
+  // Update validation when inputs change
+  useEffect(() => {
+    const errors = validateInputs();
+    setInputErrors(errors);
+  }, [validateInputs]);
+
   const handleGenerate = () => {
+    // Don't generate if there are input errors
+    if (inputErrors.length > 0) {
+      return;
+    }
+
     if (isAutoOptimizeAll) {
       // Use full auto-optimize mode - only max duration constraint
       const durationConstraint = maxTotalDuration
@@ -132,10 +358,13 @@ export default function BuilderScreen() {
         <ThemedText style={styles.label}>
           Current Average Daily Dose (pills)
         </ThemedText>
+        <ThemedText style={styles.sublabel}>
+          Maximum: 2.0 pills per day
+        </ThemedText>
         <TextInput
           style={[styles.input, { backgroundColor }]}
           keyboardType="decimal-pad"
-          placeholder="e.g., 0.75 pills"
+          placeholder="e.g., 0.75 pills (max: 2.0)"
           placeholderTextColor="#666"
           value={currentAvgDose}
           onChangeText={setCurrentAvgDose}
@@ -144,10 +373,13 @@ export default function BuilderScreen() {
         <ThemedText style={styles.label}>
           Target Average Daily Dose (pills)
         </ThemedText>
+        <ThemedText style={styles.sublabel}>
+          Must be at least 0.25 pills less than current dose
+        </ThemedText>
         <TextInput
           style={[styles.input, { backgroundColor }]}
           keyboardType="decimal-pad"
-          placeholder="e.g., 0.5 pills"
+          placeholder="e.g., 0.5 pills (≥ 0)"
           placeholderTextColor="#666"
           value={goalAvgDose}
           onChangeText={setGoalAvgDose}
@@ -211,6 +443,9 @@ export default function BuilderScreen() {
             <ThemedText style={styles.label}>
               Step Size Range (pills)
             </ThemedText>
+            <ThemedText style={styles.sublabel}>
+              How much to reduce dose per step (e.g., 0.05-0.25 pills)
+            </ThemedText>
             <View style={styles.parameterControl}>
               <View style={styles.toggleContainer}>
                 <ThemedText style={styles.toggleLabel}>Auto</ThemedText>
@@ -248,6 +483,9 @@ export default function BuilderScreen() {
             <ThemedText style={styles.label}>
               Cycle Length Range (days)
             </ThemedText>
+            <ThemedText style={styles.sublabel}>
+              How long to stay at each dose level (e.g., 7-28 days)
+            </ThemedText>
             <View style={styles.parameterControl}>
               <View style={styles.toggleContainer}>
                 <ThemedText style={styles.toggleLabel}>Auto</ThemedText>
@@ -283,6 +521,9 @@ export default function BuilderScreen() {
 
             {/* Number of Steps Range */}
             <ThemedText style={styles.label}>Number of Steps Range</ThemedText>
+            <ThemedText style={styles.sublabel}>
+              Total number of dose reductions (e.g., 3-10 steps)
+            </ThemedText>
             <View style={styles.parameterControl}>
               <View style={styles.toggleContainer}>
                 <ThemedText style={styles.toggleLabel}>Auto</ThemedText>
@@ -320,6 +561,9 @@ export default function BuilderScreen() {
             <ThemedText style={styles.label}>
               Total Duration Range (days)
             </ThemedText>
+            <ThemedText style={styles.sublabel}>
+              Total time for complete taper (e.g., 90-365 days)
+            </ThemedText>
             <View style={styles.parameterControl}>
               <View style={styles.toggleContainer}>
                 <ThemedText style={styles.toggleLabel}>Auto</ThemedText>
@@ -354,10 +598,70 @@ export default function BuilderScreen() {
             </View>
           </>
         )}
-        <Button title="Generate Plan" onPress={handleGenerate} />
+
+        {/* Input Validation Errors */}
+        {inputErrors.length > 0 && (
+          <ThemedView style={[styles.errorBox, { backgroundColor }]}>
+            <ThemedText style={styles.errorHeader}>
+              ❌ Please fix the following issues:
+            </ThemedText>
+            {inputErrors.map((error, index) => (
+              <ThemedText key={index} style={styles.errorText}>
+                • {error}
+              </ThemedText>
+            ))}
+          </ThemedView>
+        )}
+
+        <Button
+          title="Generate Plan"
+          onPress={handleGenerate}
+          disabled={inputErrors.length > 0}
+        />
       </ThemedView>
 
-      {/* Output Table */}
+      {/* Constraint Status - Show regardless of whether phases were generated */}
+      {constraintStatus &&
+        (constraintStatus.violated.length > 0 ||
+          constraintStatus.warnings.length > 0) && (
+          <ThemedView style={[styles.constraintStatus, { backgroundColor }]}>
+            {constraintStatus.violated.length > 0 && (
+              <>
+                <ThemedText style={styles.constraintHeader}>
+                  ⚠️ Constraint Issues:
+                </ThemedText>
+                {constraintStatus.violated.map(
+                  (violation: string, index: number) => (
+                    <ThemedText key={index} style={styles.violationText}>
+                      • {violation}
+                    </ThemedText>
+                  )
+                )}
+                {constraintStatus.reasoning.map(
+                  (reason: string, index: number) => (
+                    <ThemedText key={index} style={styles.reasoningText}>
+                      → {reason}
+                    </ThemedText>
+                  )
+                )}
+              </>
+            )}
+
+            {constraintStatus.warnings.length > 0 && (
+              <>
+                {constraintStatus.warnings.map(
+                  (warning: string, index: number) => (
+                    <ThemedText key={index} style={styles.warningText}>
+                      💡 {warning}
+                    </ThemedText>
+                  )
+                )}
+              </>
+            )}
+          </ThemedView>
+        )}
+
+      {/* Output Table - Only show when phases exist */}
       {taperPhases.length > 0 && (
         <>
           <ThemedView style={[styles.summaryContainer, { backgroundColor }]}>
@@ -368,49 +672,6 @@ export default function BuilderScreen() {
               Number of Phases: {taperPhases.length}
             </ThemedText>
           </ThemedView>
-
-          {/* Constraint Status */}
-          {constraintStatus &&
-            (constraintStatus.violated.length > 0 ||
-              constraintStatus.warnings.length > 0) && (
-              <ThemedView
-                style={[styles.constraintStatus, { backgroundColor }]}
-              >
-                {constraintStatus.violated.length > 0 && (
-                  <>
-                    <ThemedText style={styles.constraintHeader}>
-                      ⚠️ Constraint Issues:
-                    </ThemedText>
-                    {constraintStatus.violated.map(
-                      (violation: string, index: number) => (
-                        <ThemedText key={index} style={styles.violationText}>
-                          • {violation}
-                        </ThemedText>
-                      )
-                    )}
-                    {constraintStatus.reasoning.map(
-                      (reason: string, index: number) => (
-                        <ThemedText key={index} style={styles.reasoningText}>
-                          → {reason}
-                        </ThemedText>
-                      )
-                    )}
-                  </>
-                )}
-
-                {constraintStatus.warnings.length > 0 && (
-                  <>
-                    {constraintStatus.warnings.map(
-                      (warning: string, index: number) => (
-                        <ThemedText key={index} style={styles.warningText}>
-                          💡 {warning}
-                        </ThemedText>
-                      )
-                    )}
-                  </>
-                )}
-              </ThemedView>
-            )}
 
           <ThemedView style={[styles.table, { backgroundColor }]}>
             <ThemedView style={[styles.rowHeader, { backgroundColor }]}>
@@ -629,5 +890,25 @@ const styles = StyleSheet.create({
   infoHighlight: {
     fontWeight: "600",
     color: "#0a7ea4",
+  },
+  errorBox: {
+    marginBottom: 16,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#dc3545",
+    backgroundColor: "#fff5f5",
+  },
+  errorHeader: {
+    fontSize: 16,
+    fontWeight: "600",
+    marginBottom: 8,
+    color: "#dc3545",
+  },
+  errorText: {
+    fontSize: 14,
+    color: "#dc3545",
+    marginBottom: 4,
+    marginLeft: 8,
   },
 });

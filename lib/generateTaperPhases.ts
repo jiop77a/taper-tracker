@@ -363,6 +363,17 @@ export function generateUnifiedTaperPhases({
     maxDuration: durationRange?.max || 365,
   };
 
+  // Fix impossible cycle length constraints
+  if (baseConstraints.minCycleLength > baseConstraints.maxCycleLength) {
+    // If user specified a max that's less than our default min, use their max as both min and max
+    if (cycleLengthRange?.max && cycleLengthRange.max < 7) {
+      baseConstraints.minCycleLength = cycleLengthRange.max;
+    } else {
+      // Otherwise, use the min as both min and max
+      baseConstraints.maxCycleLength = baseConstraints.minCycleLength;
+    }
+  }
+
   // Validate constraints make sense
   if (baseConstraints.minStepSize > baseConstraints.maxStepSize) {
     // Fix impossible step size constraints
@@ -454,6 +465,26 @@ export function generateUnifiedTaperPhases({
 
   // Sort by dose descending
   combinations.sort((a, b) => b.avgDailyDose - a.avgDailyDose);
+
+  // Check if we have any valid combinations
+  if (combinations.length === 0) {
+    return {
+      phases: [],
+      constraintStatus: {
+        respected: [],
+        violated: [
+          `No valid pill combinations found with cycle length range ${constraints.minCycleLength}-${constraints.maxCycleLength} days`,
+        ],
+        warnings: [],
+        reasoning: [
+          `The cycle length constraints are too restrictive to create valid pill combinations for the dose range ${currentPillUnits.toFixed(
+            3
+          )} to ${goalPillUnits.toFixed(3)} pills`,
+          `Try increasing the maximum cycle length (recommended: at least 14 days) or adjusting the dose range`,
+        ],
+      },
+    };
+  }
 
   // Find optimal path using constrained optimization (pass pill units internally)
   const result = findConstrainedOptimalPath(
@@ -666,7 +697,36 @@ function findConstrainedOptimalPath(
       }
     }
 
-    if (!bestNext) break; // No valid next step found
+    if (!bestNext) {
+      // No valid next step found - add detailed error information
+      if (path.length === 0) {
+        // Couldn't find any valid first step
+        constraintStatus.violated.push(
+          `No valid taper combinations found with current constraints`
+        );
+        constraintStatus.reasoning.push(
+          `With max cycle length of ${constraints.maxCycleLength} days, no valid pill combinations can achieve the required dose levels`
+        );
+        constraintStatus.reasoning.push(
+          `Try increasing the maximum cycle length or adjusting step size constraints`
+        );
+      } else {
+        // Found some steps but got stuck
+        const remainingReduction = currentDose - goalDose;
+        constraintStatus.warnings.push(
+          `Taper incomplete: stopped at ${currentDose.toFixed(
+            3
+          )} pills (${remainingReduction.toFixed(3)} pills remaining to goal)`
+        );
+        constraintStatus.reasoning.push(
+          `Could not find valid combinations to continue the taper with current constraints`
+        );
+        constraintStatus.reasoning.push(
+          `Consider relaxing cycle length or step size constraints to complete the taper`
+        );
+      }
+      break; // No valid next step found
+    }
 
     path.push(bestNext);
     currentDose = bestNext.avgDailyDose;
