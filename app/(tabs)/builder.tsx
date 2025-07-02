@@ -1,14 +1,9 @@
 import TaperLineChart from "@/components/TaperLineChart";
+import { ThemedText } from "@/components/ThemedText";
+import { ThemedView } from "@/components/ThemedView";
 import MultiSlider from "@ptomasroos/react-native-multi-slider";
 import React, { useState } from "react";
-import {
-  Button,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { Button, ScrollView, StyleSheet, TextInput } from "react-native";
 import { generateTaperPhases, TaperPhase } from "../../lib/generateTaperPhases";
 
 export default function BuilderScreen() {
@@ -37,14 +32,17 @@ export default function BuilderScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.heading}>Taper Plan Builder</Text>
+      <ThemedText type="title" style={styles.heading}>
+        Taper Plan Builder
+      </ThemedText>
 
       {/* Form */}
-      <View style={styles.form}>
+      <ThemedView style={styles.form}>
         <TextInput
           style={styles.input}
           keyboardType="decimal-pad"
           placeholder="Current Avg Dose"
+          placeholderTextColor="#666"
           value={currentAvgDose}
           onChangeText={setCurrentAvgDose}
         />
@@ -52,6 +50,7 @@ export default function BuilderScreen() {
           style={styles.input}
           keyboardType="decimal-pad"
           placeholder="Goal Avg Dose"
+          placeholderTextColor="#666"
           value={goalAvgDose}
           onChangeText={setGoalAvgDose}
         />
@@ -59,6 +58,7 @@ export default function BuilderScreen() {
           style={styles.input}
           keyboardType="number-pad"
           placeholder="Number of Steps"
+          placeholderTextColor="#666"
           value={numberOfSteps}
           onChangeText={setNumberOfSteps}
         />
@@ -73,34 +73,34 @@ export default function BuilderScreen() {
             setCycleLengthRange(values as [number, number])
           }
         />
-        <Text className="mt-2 text-sm">
+        <ThemedText style={{ marginTop: 8, fontSize: 14 }}>
           Min: {cycleLengthRange[0]} days — Max: {cycleLengthRange[1]} days
-        </Text>
+        </ThemedText>
         <Button title="Generate Plan" onPress={handleGenerate} />
-      </View>
+      </ThemedView>
 
       {/* Output Table */}
       {taperPhases.length > 0 && (
-        <View style={styles.table}>
-          <View style={styles.rowHeader}>
-            <Text style={styles.cellHeader}>Phase</Text>
-            <Text style={styles.cellHeader}>Full</Text>
-            <Text style={styles.cellHeader}>Half</Text>
-            <Text style={styles.cellHeader}>Total</Text>
-            <Text style={styles.cellHeader}>Avg/Day</Text>
-            <Text style={styles.cellHeader}>Cycle Length</Text>
-          </View>
+        <ThemedView style={styles.table}>
+          <ThemedView style={styles.rowHeader}>
+            <ThemedText style={styles.cellHeader}>Phase</ThemedText>
+            <ThemedText style={styles.cellHeader}>Full</ThemedText>
+            <ThemedText style={styles.cellHeader}>Half</ThemedText>
+            <ThemedText style={styles.cellHeader}>Total</ThemedText>
+            <ThemedText style={styles.cellHeader}>Avg/Day</ThemedText>
+            <ThemedText style={styles.cellHeader}>Cycle Length</ThemedText>
+          </ThemedView>
           {taperPhases.map((phase) => (
-            <View style={styles.row} key={phase.phase}>
-              <Text style={styles.cell}>{phase.phase}</Text>
-              <Text style={styles.cell}>{phase.fullPills}</Text>
-              <Text style={styles.cell}>{phase.halfPills}</Text>
-              <Text style={styles.cell}>{phase.totalPills}</Text>
-              <Text style={styles.cell}>{phase.avgDailyDose}</Text>
-              <Text style={styles.cell}>{phase.cycleLength}</Text>
-            </View>
+            <ThemedView style={styles.row} key={phase.phase}>
+              <ThemedText style={styles.cell}>{phase.phase}</ThemedText>
+              <ThemedText style={styles.cell}>{phase.fullPills}</ThemedText>
+              <ThemedText style={styles.cell}>{phase.halfPills}</ThemedText>
+              <ThemedText style={styles.cell}>{phase.totalPills}</ThemedText>
+              <ThemedText style={styles.cell}>{phase.avgDailyDose}</ThemedText>
+              <ThemedText style={styles.cell}>{phase.cycleLength}</ThemedText>
+            </ThemedView>
           ))}
-        </View>
+        </ThemedView>
       )}
       {taperPhases.length > 0 && (
         <TaperLineChart
@@ -132,6 +132,8 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     padding: 10,
     marginBottom: 12,
+    backgroundColor: "#fff",
+    color: "#11181C",
   },
   table: {
     borderWidth: 1,
@@ -139,8 +141,9 @@ const styles = StyleSheet.create({
   },
   rowHeader: {
     flexDirection: "row",
-    backgroundColor: "#eee",
     paddingVertical: 4,
+    backgroundColor: "#f5f5f5",
+    borderColor: "#ccc",
   },
   row: {
     flexDirection: "row",

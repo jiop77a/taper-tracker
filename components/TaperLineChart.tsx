@@ -8,6 +8,9 @@ interface TaperLineChartProps {
 const screenWidth = Dimensions.get("window").width;
 
 export default function TaperLineChart({ data }: TaperLineChartProps) {
+  // Use light mode colors for consistency
+  const backgroundColor = "#f8f9fa";
+
   const chartData = {
     labels: data.map((d) => `P${d.phase}`),
     datasets: [
@@ -19,16 +22,16 @@ export default function TaperLineChart({ data }: TaperLineChartProps) {
   };
 
   return (
-    <View>
+    <View style={{ backgroundColor, borderRadius: 16, padding: 8 }}>
       <LineChart
         data={chartData}
         width={screenWidth - 40}
         height={220}
         chartConfig={{
-          backgroundGradientFrom: "#fff",
-          backgroundGradientTo: "#fff",
-          color: (opacity = 1) => `rgba(79, 70, 229, ${opacity})`, // indigo
-          labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+          backgroundGradientFrom: backgroundColor,
+          backgroundGradientTo: backgroundColor,
+          color: (opacity = 1) => `rgba(10, 126, 164, ${opacity})`,
+          labelColor: (opacity = 1) => `rgba(17, 24, 28, ${opacity})`,
           decimalPlaces: 2,
         }}
         bezier
