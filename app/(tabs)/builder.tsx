@@ -70,18 +70,25 @@ export default function BuilderScreen() {
 
       {/* Form */}
       <ThemedView style={[styles.form, { backgroundColor }]}>
+        <ThemedText style={styles.label}>
+          Current Average Daily Dose (mg)
+        </ThemedText>
         <TextInput
           style={[styles.input, { backgroundColor }]}
           keyboardType="decimal-pad"
-          placeholder="Current Avg Dose"
+          placeholder="e.g., 0.75"
           placeholderTextColor="#666"
           value={currentAvgDose}
           onChangeText={setCurrentAvgDose}
         />
+
+        <ThemedText style={styles.label}>
+          Target Average Daily Dose (mg)
+        </ThemedText>
         <TextInput
           style={[styles.input, { backgroundColor }]}
           keyboardType="decimal-pad"
-          placeholder="Goal Avg Dose"
+          placeholder="e.g., 0.5"
           placeholderTextColor="#666"
           value={goalAvgDose}
           onChangeText={setGoalAvgDose}
@@ -106,18 +113,29 @@ export default function BuilderScreen() {
         {/* Conditional inputs based on mode */}
         {isAutoOptimize ? (
           <>
+            <ThemedText style={styles.label}>Maximum Step Size (mg)</ThemedText>
+            <ThemedText style={styles.sublabel}>
+              Leave blank to let the algorithm decide the optimal step sizes
+            </ThemedText>
             <TextInput
               style={[styles.input, { backgroundColor }]}
               keyboardType="decimal-pad"
-              placeholder="Max Step Size (optional)"
+              placeholder="e.g., 0.05"
               placeholderTextColor="#666"
               value={maxStepSize}
               onChangeText={setMaxStepSize}
             />
+
+            <ThemedText style={styles.label}>
+              Maximum Total Duration (days)
+            </ThemedText>
+            <ThemedText style={styles.sublabel}>
+              The algorithm will find the smoothest taper within this timeframe
+            </ThemedText>
             <TextInput
               style={[styles.input, { backgroundColor }]}
               keyboardType="number-pad"
-              placeholder="Max Total Duration (days)"
+              placeholder="e.g., 180"
               placeholderTextColor="#666"
               value={maxTotalDuration}
               onChangeText={setMaxTotalDuration}
@@ -125,14 +143,27 @@ export default function BuilderScreen() {
           </>
         ) : (
           <>
+            <ThemedText style={styles.label}>
+              Number of Reduction Steps
+            </ThemedText>
+            <ThemedText style={styles.sublabel}>
+              How many phases you want in your taper plan
+            </ThemedText>
             <TextInput
               style={[styles.input, { backgroundColor }]}
               keyboardType="number-pad"
-              placeholder="Number of Steps"
+              placeholder="e.g., 7"
               placeholderTextColor="#666"
               value={numberOfSteps}
               onChangeText={setNumberOfSteps}
             />
+
+            <ThemedText style={styles.label}>
+              Cycle Length Range (days)
+            </ThemedText>
+            <ThemedText style={styles.sublabel}>
+              How long to stay at each dose level before reducing
+            </ThemedText>
             <MultiSlider
               values={cycleLengthRange}
               min={0}
@@ -144,7 +175,7 @@ export default function BuilderScreen() {
                 setCycleLengthRange(values as [number, number])
               }
             />
-            <ThemedText style={{ marginTop: 8, fontSize: 14 }}>
+            <ThemedText style={styles.sliderValues}>
               Min: {cycleLengthRange[0]} days — Max: {cycleLengthRange[1]} days
             </ThemedText>
           </>
@@ -275,6 +306,25 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     marginBottom: 4,
+    textAlign: "center",
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: "600",
+    marginBottom: 4,
+    marginTop: 8,
+    color: "#11181C",
+  },
+  sublabel: {
+    fontSize: 14,
+    color: "#666",
+    marginBottom: 8,
+    fontStyle: "italic",
+  },
+  sliderValues: {
+    marginTop: 8,
+    fontSize: 14,
+    color: "#666",
     textAlign: "center",
   },
 });
