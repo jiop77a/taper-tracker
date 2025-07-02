@@ -127,10 +127,6 @@ export default function BuilderScreen() {
       const strength = parseFloat(pillStrength);
       if (isNaN(strength) || strength <= 0) {
         errors.push("Pill strength must be a positive number");
-      } else if (strength > 10) {
-        errors.push(
-          "Pill strength seems unusually high (>10mg) - please verify"
-        );
       }
     }
 
