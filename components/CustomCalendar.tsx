@@ -1,5 +1,11 @@
-import React, { useState } from "react";
-import { View, TouchableOpacity, StyleSheet, ScrollView } from "react-native";
+import React, { useState, useEffect } from "react";
+import {
+  View,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+  Dimensions,
+} from "react-native";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 
@@ -15,6 +21,28 @@ export default function CustomCalendar({
   startDate = new Date(),
 }: CustomCalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
+
+  // Track screen dimensions and orientation
+  const [screenData, setScreenData] = useState(() => {
+    const { width, height } = Dimensions.get("window");
+    return {
+      width,
+      height,
+      isLandscape: width > height,
+    };
+  });
+
+  useEffect(() => {
+    const subscription = Dimensions.addEventListener("change", ({ window }) => {
+      setScreenData({
+        width: window.width,
+        height: window.height,
+        isLandscape: window.width > window.height,
+      });
+    });
+
+    return () => subscription?.remove();
+  }, []);
 
   const textColor = "#11181C";
   const fullPillColor = "#cce5ff";
@@ -90,7 +118,13 @@ export default function CustomCalendar({
         if (cellIndex < firstDay || dayCounter > daysInMonth) {
           // Empty cell
           weekDays.push(
-            <View key={`empty-${cellIndex}`} style={styles.dayCell} />
+            <View
+              key={`empty-${cellIndex}`}
+              style={[
+                styles.dayCell,
+                screenData.isLandscape && styles.dayCellLandscape,
+              ]}
+            />
           );
         } else {
           // Day cell
@@ -109,6 +143,7 @@ export default function CustomCalendar({
               key={dayCounter}
               style={[
                 styles.dayCell,
+                screenData.isLandscape && styles.dayCellLandscape,
                 { backgroundColor },
                 isTodayDate && {
                   borderWidth: 3,
@@ -168,9 +203,20 @@ export default function CustomCalendar({
         </View>
 
         {/* Day headers */}
-        <View style={styles.dayHeaderRow}>
+        <View
+          style={[
+            styles.dayHeaderRow,
+            screenData.isLandscape && styles.dayHeaderRowLandscape,
+          ]}
+        >
           {dayNames.map((day) => (
-            <View key={day} style={styles.dayHeaderCell}>
+            <View
+              key={day}
+              style={[
+                styles.dayHeaderCell,
+                screenData.isLandscape && styles.dayHeaderCellLandscape,
+              ]}
+            >
               <ThemedText style={[styles.dayHeaderText, { color: textColor }]}>
                 {day}
               </ThemedText>
@@ -179,7 +225,14 @@ export default function CustomCalendar({
         </View>
 
         {/* Calendar grid */}
-        <View style={styles.calendarGrid}>{renderCalendarDays()}</View>
+        <View
+          style={[
+            styles.calendarGrid,
+            screenData.isLandscape && styles.calendarGridLandscape,
+          ]}
+        >
+          {renderCalendarDays()}
+        </View>
 
         {/* Legend */}
         <ThemedText style={[styles.legend, { color: textColor }]}>
@@ -251,5 +304,23 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: 20,
     fontSize: 14,
+  },
+  calendarGridLandscape: {
+    alignSelf: "center",
+    maxWidth: 600, // Increased width for better landscape viewing
+    width: "80%", // Use percentage of screen width
+  },
+  dayCellLandscape: {
+    maxWidth: 80, // Increased cell width for better visibility
+    maxHeight: 80, // Increased cell height for better visibility
+  },
+  dayHeaderRowLandscape: {
+    alignSelf: "center",
+    maxWidth: 600, // Match calendar grid width
+    width: "80%", // Match calendar grid width
+  },
+  dayHeaderCellLandscape: {
+    flex: 1, // Keep flex behavior but within constrained parent
+    maxWidth: 86, // Slightly larger to account for margins (80 + 6 for margins)
   },
 });
