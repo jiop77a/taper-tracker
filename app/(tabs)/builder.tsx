@@ -7,6 +7,9 @@ import { Button, ScrollView, StyleSheet, TextInput } from "react-native";
 import { generateTaperPhases, TaperPhase } from "../../lib/generateTaperPhases";
 
 export default function BuilderScreen() {
+  // Unified background color to match TaperLineChart
+  const backgroundColor = "#f8f9fa";
+
   const [currentAvgDose, setCurrentAvgDose] = useState("0.75");
   const [goalAvgDose, setGoalAvgDose] = useState("0.5");
   const [numberOfSteps, setNumberOfSteps] = useState("7");
@@ -31,15 +34,18 @@ export default function BuilderScreen() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView
+      contentContainerStyle={[styles.container, { backgroundColor }]}
+      style={{ backgroundColor }}
+    >
       <ThemedText type="title" style={styles.heading}>
         Taper Plan Builder
       </ThemedText>
 
       {/* Form */}
-      <ThemedView style={styles.form}>
+      <ThemedView style={[styles.form, { backgroundColor }]}>
         <TextInput
-          style={styles.input}
+          style={[styles.input, { backgroundColor }]}
           keyboardType="decimal-pad"
           placeholder="Current Avg Dose"
           placeholderTextColor="#666"
@@ -47,7 +53,7 @@ export default function BuilderScreen() {
           onChangeText={setCurrentAvgDose}
         />
         <TextInput
-          style={styles.input}
+          style={[styles.input, { backgroundColor }]}
           keyboardType="decimal-pad"
           placeholder="Goal Avg Dose"
           placeholderTextColor="#666"
@@ -55,7 +61,7 @@ export default function BuilderScreen() {
           onChangeText={setGoalAvgDose}
         />
         <TextInput
-          style={styles.input}
+          style={[styles.input, { backgroundColor }]}
           keyboardType="number-pad"
           placeholder="Number of Steps"
           placeholderTextColor="#666"
@@ -81,8 +87,8 @@ export default function BuilderScreen() {
 
       {/* Output Table */}
       {taperPhases.length > 0 && (
-        <ThemedView style={styles.table}>
-          <ThemedView style={styles.rowHeader}>
+        <ThemedView style={[styles.table, { backgroundColor }]}>
+          <ThemedView style={[styles.rowHeader, { backgroundColor }]}>
             <ThemedText style={styles.cellHeader}>Phase</ThemedText>
             <ThemedText style={styles.cellHeader}>Full</ThemedText>
             <ThemedText style={styles.cellHeader}>Half</ThemedText>
@@ -91,7 +97,10 @@ export default function BuilderScreen() {
             <ThemedText style={styles.cellHeader}>Cycle Length</ThemedText>
           </ThemedView>
           {taperPhases.map((phase) => (
-            <ThemedView style={styles.row} key={phase.phase}>
+            <ThemedView
+              style={[styles.row, { backgroundColor }]}
+              key={phase.phase}
+            >
               <ThemedText style={styles.cell}>{phase.phase}</ThemedText>
               <ThemedText style={styles.cell}>{phase.fullPills}</ThemedText>
               <ThemedText style={styles.cell}>{phase.halfPills}</ThemedText>
@@ -132,7 +141,6 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     padding: 10,
     marginBottom: 12,
-    backgroundColor: "#fff",
     color: "#11181C",
   },
   table: {
@@ -142,7 +150,6 @@ const styles = StyleSheet.create({
   rowHeader: {
     flexDirection: "row",
     paddingVertical: 4,
-    backgroundColor: "#f5f5f5",
     borderColor: "#ccc",
   },
   row: {
