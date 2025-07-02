@@ -4,6 +4,7 @@ import { ThemedView } from "@/components/ThemedView";
 import React, { useState, useEffect, useCallback } from "react";
 import {
   Button,
+  Dimensions,
   ScrollView,
   StyleSheet,
   TextInput,
@@ -21,6 +22,28 @@ import {
 export default function BuilderScreen() {
   // Unified background color to match TaperLineChart
   const backgroundColor = "#f8f9fa";
+
+  // Track screen dimensions for responsive design
+  const [screenData, setScreenData] = useState(() => {
+    const { width, height } = Dimensions.get("window");
+    return {
+      width,
+      height,
+      isSmallScreen: width < 375, // iPhone SE and smaller
+    };
+  });
+
+  useEffect(() => {
+    const subscription = Dimensions.addEventListener("change", ({ window }) => {
+      setScreenData({
+        width: window.width,
+        height: window.height,
+        isSmallScreen: window.width < 375,
+      });
+    });
+
+    return () => subscription?.remove();
+  }, []);
 
   const [currentAvgDose, setCurrentAvgDose] = useState("0.75");
   const [goalAvgDose, setGoalAvgDose] = useState("0.5");
@@ -53,6 +76,9 @@ export default function BuilderScreen() {
 
   // Input validation state
   const [inputErrors, setInputErrors] = useState<string[]>([]);
+
+  // Create responsive styles
+  const styles = createStyles(screenData.isSmallScreen);
 
   // Determine display units
   const isMilligramMode = pillStrength && pillStrength.trim() !== "";
@@ -717,198 +743,203 @@ export default function BuilderScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    padding: 16,
-  },
-  heading: {
-    fontSize: 20,
-    fontWeight: "bold",
-    marginBottom: 12,
-  },
-  form: {
-    marginBottom: 24,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#aaa",
-    borderRadius: 6,
-    padding: 10,
-    marginBottom: 12,
-    color: "#11181C",
-  },
-  table: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-  },
-  rowHeader: {
-    flexDirection: "row",
-    paddingVertical: 4,
-    borderColor: "#ccc",
-  },
-  row: {
-    flexDirection: "row",
-    paddingVertical: 4,
-    borderTopWidth: 1,
-    borderTopColor: "#ccc",
-  },
-  cellHeader: {
-    flex: 1,
-    fontWeight: "bold",
-    textAlign: "center",
-  },
-  cell: {
-    flex: 1,
-    textAlign: "center",
-  },
-  modeSelection: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 8,
-    paddingVertical: 8,
-  },
-  modeLabel: {
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  modeDescription: {
-    fontSize: 14,
-    fontStyle: "italic",
-    marginBottom: 16,
-    color: "#666",
-  },
-  summaryContainer: {
-    marginBottom: 16,
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#ccc",
-  },
-  summaryText: {
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 4,
-    textAlign: "center",
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 4,
-    marginTop: 8,
-    color: "#11181C",
-  },
-  sublabel: {
-    fontSize: 14,
-    color: "#666",
-    marginBottom: 8,
-    fontStyle: "italic",
-  },
-  sliderValues: {
-    marginTop: 8,
-    fontSize: 14,
-    color: "#666",
-    textAlign: "center",
-  },
-  parameterControl: {
-    marginBottom: 16,
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#ddd",
-  },
-  toggleContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 8,
-  },
-  toggleLabel: {
-    fontSize: 14,
-    color: "#666",
-    marginHorizontal: 8,
-  },
-  rangeInputs: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    gap: 12,
-  },
-  rangeInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: "#aaa",
-    borderRadius: 6,
-    padding: 10,
-    color: "#11181C",
-  },
-  constraintStatus: {
-    marginBottom: 16,
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#ff9500",
-    backgroundColor: "#fff8f0",
-  },
-  constraintHeader: {
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 8,
-    color: "#d2691e",
-  },
-  violationText: {
-    fontSize: 14,
-    color: "#d2691e",
-    marginBottom: 4,
-    marginLeft: 8,
-  },
-  reasoningText: {
-    fontSize: 13,
-    color: "#8b4513",
-    marginBottom: 4,
-    marginLeft: 16,
-    fontStyle: "italic",
-  },
-  warningText: {
-    fontSize: 14,
-    color: "#ff6b35",
-    marginTop: 8,
-    fontWeight: "500",
-  },
-  infoBox: {
-    marginBottom: 16,
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#0a7ea4",
-    backgroundColor: "#f0f8ff",
-  },
-  infoText: {
-    fontSize: 14,
-    color: "#11181C",
-    lineHeight: 20,
-  },
-  infoHighlight: {
-    fontWeight: "600",
-    color: "#0a7ea4",
-  },
-  errorBox: {
-    marginBottom: 16,
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#dc3545",
-    backgroundColor: "#fff5f5",
-  },
-  errorHeader: {
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 8,
-    color: "#dc3545",
-  },
-  errorText: {
-    fontSize: 14,
-    color: "#dc3545",
-    marginBottom: 4,
-    marginLeft: 8,
-  },
-});
+// Create responsive styles based on screen size
+const createStyles = (isSmallScreen: boolean) =>
+  StyleSheet.create({
+    container: {
+      padding: isSmallScreen ? 12 : 16,
+    },
+    heading: {
+      fontSize: 20,
+      fontWeight: "bold",
+      marginBottom: 12,
+    },
+    form: {
+      marginBottom: 24,
+    },
+    input: {
+      borderWidth: 1,
+      borderColor: "#aaa",
+      borderRadius: 6,
+      padding: isSmallScreen ? 8 : 10,
+      marginBottom: 12,
+      color: "#11181C",
+      fontSize: isSmallScreen ? 14 : 16,
+    },
+    table: {
+      borderWidth: 1,
+      borderColor: "#ccc",
+    },
+    rowHeader: {
+      flexDirection: "row",
+      paddingVertical: 4,
+      borderColor: "#ccc",
+    },
+    row: {
+      flexDirection: "row",
+      paddingVertical: 4,
+      borderTopWidth: 1,
+      borderTopColor: "#ccc",
+    },
+    cellHeader: {
+      flex: 1,
+      fontWeight: "bold",
+      textAlign: "center",
+    },
+    cell: {
+      flex: 1,
+      textAlign: "center",
+    },
+    modeSelection: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 8,
+      paddingVertical: 8,
+    },
+    modeLabel: {
+      fontSize: 16,
+      fontWeight: "600",
+    },
+    modeDescription: {
+      fontSize: 14,
+      fontStyle: "italic",
+      marginBottom: 16,
+      color: "#666",
+    },
+    summaryContainer: {
+      marginBottom: 16,
+      padding: 12,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: "#ccc",
+    },
+    summaryText: {
+      fontSize: 16,
+      fontWeight: "600",
+      marginBottom: 4,
+      textAlign: "center",
+    },
+    label: {
+      fontSize: isSmallScreen ? 15 : 16,
+      fontWeight: "600",
+      marginBottom: 4,
+      marginTop: 8,
+      color: "#11181C",
+    },
+    sublabel: {
+      fontSize: isSmallScreen ? 13 : 14,
+      color: "#666",
+      marginBottom: 8,
+      fontStyle: "italic",
+    },
+    sliderValues: {
+      marginTop: 8,
+      fontSize: 14,
+      color: "#666",
+      textAlign: "center",
+    },
+    parameterControl: {
+      marginBottom: 16,
+      padding: isSmallScreen ? 8 : 12,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: "#ddd",
+    },
+    toggleContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: 8,
+    },
+    toggleLabel: {
+      fontSize: 14,
+      color: "#666",
+      marginHorizontal: 8,
+    },
+    rangeInputs: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+    },
+    rangeInput: {
+      flex: 1,
+      borderWidth: 1,
+      borderColor: "#aaa",
+      borderRadius: 6,
+      padding: isSmallScreen ? 8 : 10,
+      color: "#11181C",
+      marginHorizontal: isSmallScreen ? 4 : 6,
+      fontSize: isSmallScreen ? 14 : 16,
+      minWidth: isSmallScreen ? 80 : 100, // Ensure minimum width for usability
+    },
+    constraintStatus: {
+      marginBottom: 16,
+      padding: 12,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: "#ff9500",
+      backgroundColor: "#fff8f0",
+    },
+    constraintHeader: {
+      fontSize: 16,
+      fontWeight: "600",
+      marginBottom: 8,
+      color: "#d2691e",
+    },
+    violationText: {
+      fontSize: 14,
+      color: "#d2691e",
+      marginBottom: 4,
+      marginLeft: 8,
+    },
+    reasoningText: {
+      fontSize: 13,
+      color: "#8b4513",
+      marginBottom: 4,
+      marginLeft: 16,
+      fontStyle: "italic",
+    },
+    warningText: {
+      fontSize: 14,
+      color: "#ff6b35",
+      marginTop: 8,
+      fontWeight: "500",
+    },
+    infoBox: {
+      marginBottom: 16,
+      padding: 12,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: "#0a7ea4",
+      backgroundColor: "#f0f8ff",
+    },
+    infoText: {
+      fontSize: 14,
+      color: "#11181C",
+      lineHeight: 20,
+    },
+    infoHighlight: {
+      fontWeight: "600",
+      color: "#0a7ea4",
+    },
+    errorBox: {
+      marginBottom: 16,
+      padding: 12,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: "#dc3545",
+      backgroundColor: "#fff5f5",
+    },
+    errorHeader: {
+      fontSize: 16,
+      fontWeight: "600",
+      marginBottom: 8,
+      color: "#dc3545",
+    },
+    errorText: {
+      fontSize: 14,
+      color: "#dc3545",
+      marginBottom: 4,
+      marginLeft: 8,
+    },
+  });
